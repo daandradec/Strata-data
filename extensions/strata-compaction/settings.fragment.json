@@ -1,0 +1,9 @@
+{
+  "compaction": {
+    "modelOverrides": {
+      "strata/qwen3.8-flash-next-iq3_xxs": {
+        "reserveTokens": 32768
+      }
+    }
+  }
+}

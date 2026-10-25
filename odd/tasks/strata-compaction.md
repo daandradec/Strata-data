@@ -11,8 +11,8 @@ Branch: feat/strata-compaction; delivery: local work-unit commits, no publicatio
 
 ## Tasks
 
-- T1 [S2-S4] Apply the exact-model reserve with an in-project settings backup and preservation checks. Route: inline (small configuration edit); status: pending; commit: pending.
-- T2 [S1-S3] Implement and test bounded summary input/chunk reduction, including huge items and failure/abort handling. Route: delegated writer (measured context backstop); status: pending; commit: pending.
+- T1 [S2-S4] Apply the exact-model reserve with an in-project settings backup and preservation checks. Route: inline (small configuration edit); status: done; commit: pending; checks: full settings preservation and byte-exact backup passed (exit 0).
+- T2 [S1-S3] Implement and test bounded summary input/chunk reduction, including huge items and failure/abort handling. Route: delegated writer (measured context backstop); status: in_progress; commit: pending.
 - T3 [S1-S4] Integrate through the supported Strata-only Pi compaction hook, preserve native retained boundaries and file tracking, and document operation. Route: delegated writer (measured context backstop), after T2; status: pending; commit: pending.
 - T4 [S1-S4] Run applicable tests, assess actual diff, perform required verification, and register the verified extension without changing unrelated models/settings. Route: parent orchestration; status: pending; commit: pending.
 
@@ -31,3 +31,5 @@ L3 — Evidence from the completed audit: provider and server both advertise 131
 L4 — Explicit user decision: "Sí, autorizar esos cambios" for writing agent settings to apply A and register B, with an in-project backup and preservation of other settings; no changes to installed packages or sessions.
 
 L5 — Feasibility confirmed by read-only exploration: a supported local Pi extension can restrict itself to Strata without patching versioned node_modules. Return cancel:true on any failure to prevent native fallback; preserve native retention boundaries, previous summary and cumulative file-operation tracking (including previous custom-hook details). Use the public modelRegistry.complete API with thinking disabled; count the complete simple system/user prompt through Strata's count_tokens route with matching template settings. The installed package contains dist/docs/examples but no source checkout or upstream test suite. The project has no Git metadata; establish lightweight local tracking that excludes model binaries, logs, caches, backups and existing user data. No push, PR or dependency installation is planned. Live verification must use isolated transient state, never the user's conversation. Native overflow recovery may add its own omission entries before this hook; the extension guarantees no partial custom compaction is persisted, not zero native bookkeeping.
+
+L6 — T1 completed: reserve32768 applied to the exact model; byte-exact backup at `.launcher-tests/strata-compaction/settings.before-2026-10-25T02-08-14-032Z.json`. Full parsed-object readback confirms all unrelated settings preserved (exit0); extension not yet registered. Threshold98304/131072 (75%). Direct configuration merge has no meaningful behavioral RED; structural verification passed. Initialized local Git branch feat/strata-compaction with allowlist ignore rules; initial tracking commit bb4c7ca excludes existing data.
