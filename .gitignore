@@ -1,0 +1,12 @@
+# Track only the bounded compaction implementation, not existing model data.
+/*
+!/.gitignore
+!/extensions/
+/extensions/*
+!/extensions/strata-compaction/
+/extensions/strata-compaction/node_modules/
+!/odd/
+/odd/*
+!/odd/tasks/
+/odd/tasks/*
+!/odd/tasks/strata-compaction.md
