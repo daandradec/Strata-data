@@ -6,11 +6,23 @@ so an oversized conversation, individual message, tool argument, tool result or
 previous summary cannot create an unbudgeted summary request. Other models keep
 native behavior without counting, authentication or generation calls.
 
-**T3 implements the hook; it does not activate it.** T4 owns isolated live-hook
-verification and registration. This work does not change settings, the normal
-conversation thinking level, installed packages or user sessions.
+The extension is registered in the current Gentle Shell agent profile at
+`C:/Users/daand/.gentle-shell/agent/settings.json`. Run **`/reload`** in an existing
+Gentle session, or start a new Gentle process, to load it. Select the Strata model
+as usual; no special compaction command is required.
 
-## Operation after parent-approved activation
+The exact-model reserve is **32768**, so automatic compaction triggers above
+**98304 / 131072 tokens (75%)**. Normal conversation thinking remains unchanged;
+only summary requests disable thinking. Installed packages and existing session
+records were not edited.
+
+`settings.fragment.json` shows the two intended settings. Merge its model override
+and extension entry into existing settings; never replace unrelated overrides or
+extension entries. To disable this integration, remove only this extension entry
+and the added Strata reserve value, preserving any other model settings. Local
+pre-change backups are in `.launcher-tests/strata-compaction/` under the project.
+
+## Operation
 
 - `/compact` and automatic threshold/overflow compaction share
   `session_before_compact`; optional `/compact` instructions are counted too.
@@ -94,7 +106,18 @@ both project and agent directories set to a fresh system-temp directory. Obtain
 Disable jiti disk caching (`JITI_FS_CACHE=0`) for the isolated loader process and
 remove the scratch directory in teardown. Validate the returned boundary, usage
 and file details; repeat with an aborted signal to confirm cancellation. The
-parent's prior plain-prompt parity check reported **74 counted = 74 generated
-prompt tokens** with thinking disabled; a full live hook call is still a T4 check.
-Only after those checks should the parent register this extension while preserving
-all unrelated settings.
+initial plain-prompt parity check reported **74 counted = 74 generated prompt
+tokens** with thinking disabled. The full live hook check subsequently passed:
+**133 counted = 133 actual input tokens**, 32 output tokens, preserved boundaries
+and cumulative file lists, abort returning cancellation with no further calls,
+and an unrelated model returning a no-op. The hook used synthetic preparation
+without a SessionManager or real conversation. Runtime setup used a read-only
+in-memory CredentialStore with public ModelRuntime/ModelRegistry APIs; AuthStorage
+is not exported from the package entry.
+
+Independent verification passed the 42-test suite, syntax checks, isolated loader,
+two additional public-helper probes and selective configuration-preservation check.
+Registration readback confirmed that only the approved reserve and extension path
+differ from the original settings. Oversized and multi-level cases are tested
+offline; the user's original session was not compacted for verification. Repeat
+the isolated checks before registering an updated implementation.

@@ -5,5 +5,8 @@
         "reserveTokens": 32768
       }
     }
-  }
+  },
+  "extensions": [
+    "E:/Strata-data/extensions/strata-compaction/index.ts"
+  ]
 }
