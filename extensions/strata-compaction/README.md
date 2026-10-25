@@ -7,8 +7,8 @@ previous summary cannot create an unbudgeted summary request. Other models keep
 native behavior without counting, authentication or generation calls.
 
 The extension is registered in the current Gentle Shell agent profile at
-`C:/Users/daand/.gentle-shell/agent/settings.json`. Run **`/reload`** in an existing
-Gentle session, or start a new Gentle process, to load it. Select the Strata model
+`C:/Users/daand/.gentle-shell/agent/settings.json`. Start a new Gentle process to load this revision; `/reload` alone can retain
+previously loaded `.mjs` helpers. Select the Strata model
 as usual; no special compaction command is required.
 
 The exact-model reserve is **32768**, so automatic compaction triggers above
@@ -28,8 +28,10 @@ pre-change backups are in `.launcher-tests/strata-compaction/` under the project
   `session_before_compact`; optional `/compact` instructions are counted too.
 - Native preparation decides what to summarize and retain. The hook summarizes
   `messagesToSummarize` plus `turnPrefixMessages`, never the retained tail.
-- The previous summary is included in full. Successful results preserve
-  `firstKeptEntryId` and `tokensBefore` verbatim; Pi alone persists the checkpoint.
+- The previous summary, when present, is included in full. A first compaction
+  with no earlier checkpoint uses current file tracking only; missing previous
+  details are not an error. Successful results preserve `firstKeptEntryId` and
+  `tokensBefore` verbatim; Pi alone persists the checkpoint.
 - Any failure returns `{ cancel: true }`. Check the count endpoint/model and retry
   `/compact` after resolving the cause. There is no unbounded fallback, extension
   retry or partial custom checkpoint. Notification failures also cannot escape.
@@ -69,8 +71,45 @@ never mutated.
 
 The adapter adds no storage or background work. Core limits (16 rounds, 256
 completions and conservative no-progress termination) remain unchanged. Fetch
-implementations must honor AbortSignal, as native fetch does. Failure notices are
-intentionally generic and contain no provider diagnostics, payloads or credentials.
+implementations must honor AbortSignal, as native fetch does. Failure notices use
+fixed cause codes and stages, not raw provider diagnostics, payloads or credentials.
+
+## Cancellation diagnostics
+
+After updating the extension, start a new Gentle process for the affected session,
+then try `/compact` once. Both automatic and manual cancellation now report:
+
+```text
+Strata compaction cancelled [CODE] at STAGE. Safe explanation. No custom checkpoint saved.
+```
+
+Share that warning's code and stage for diagnosis. Do not repeatedly retry an
+unchanged failure. The diagnostic does not remove the protection, retry requests,
+write session entries or change the context, output reserve or count timeout.
+
+| Code | Meaning |
+|---|---|
+| `ABORTED` | The operation's AbortSignal was cancelled; not necessarily a user action |
+| `MODEL_SNAPSHOT_FAILED` | The selected model could not be cloned before requests |
+| `CONFIG_INVALID` | Unsupported model transport or count-timeout configuration |
+| `PREPARATION_FAILED` | File tracking, source serialization or checkpoint construction failed; stage identifies which |
+| `AUTH_UNAVAILABLE` / `AUTH_FAILED` | Credentials unavailable or public auth resolution failed |
+| `COUNT_TIMEOUT` | The existing 15-second token-count deadline expired |
+| `COUNT_HTTP` | Counter returned an HTTP failure; a validated numeric status may be shown |
+| `COUNT_FAILED` / `COUNT_INVALID` | Counting failed or did not return a valid integer |
+| `SUMMARY_LENGTH` | Summary generation reached its output limit |
+| `SUMMARY_EMPTY` / `SUMMARY_NON_TEXT` | No usable plain-text summary was returned |
+| `SUMMARY_FAILED` | Generation failed or did not end with a complete response |
+| `REDUCTION_STALLED` / `ROUND_LIMIT` / `CALL_LIMIT` | Bounded reduction stopped without publishing partial output |
+| `PROMPT_BUDGET` / `INPUT_INVALID` | Instructions/output budget cannot fit or source/settings are invalid |
+| `UNEXPECTED_ERROR` | Unclassified error; only the fixed current stage is exposed |
+
+Only locally assigned codes, fixed explanations, fixed stages and validated HTTP
+status numbers are displayed. Exception text, response bodies, URLs, paths,
+conversation text and authentication details remain private. Notification failure
+still returns `{ cancel: true }` and never invokes native fallback. The original
+generic warning cannot be retroactively assigned a cause; a new affected-session
+attempt is needed. This diagnostic change does not claim to fix that unknown cause.
 
 ## Offline verification
 
