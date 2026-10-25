@@ -7,8 +7,8 @@ previous summary cannot create an unbudgeted summary request. Other models keep
 native behavior without counting, authentication or generation calls.
 
 The extension is registered in the current Gentle Shell agent profile at
-`C:/Users/daand/.gentle-shell/agent/settings.json`. Start a new Gentle process to load this revision; `/reload` alone can retain
-previously loaded `.mjs` helpers. Select the Strata model
+`C:/Users/daand/.gentle-shell/agent/settings.json`. Run **`/reload`** in an existing
+Gentle session, or start a new Gentle process, to load it. Select the Strata model
 as usual; no special compaction command is required.
 
 The exact-model reserve is **32768**, so automatic compaction triggers above
@@ -74,10 +74,27 @@ completions and conservative no-progress termination) remain unchanged. Fetch
 implementations must honor AbortSignal, as native fetch does. Failure notices use
 fixed cause codes and stages, not raw provider diagnostics, payloads or credentials.
 
+## Reload behavior
+
+Keep the registered entry at `index.ts`. Its implementation chain is now
+`index.ts` → `adapter.ts` → `core.ts`, so Pi's supported TypeScript loader can
+refresh the whole chain on `/reload`. Native `.mjs` helpers were cached across
+fresh extension loads in the same process; disabling Jiti's filesystem cache did
+not fix that native ESM cache. No cache patch, duplicate implementation or settings
+change is needed.
+
+The public-loader regression below checks successive adapter, core and entry edits
+with normal filesystem caching and the default Jiti import policy. It does **not**
+establish reload behavior with an explicit `JITI_TRY_NATIVE=true` override. Do not
+silently change that environment setting to work around a failed check. If the
+affected panel still shows the old generic warning after `/reload`, report that
+stale-code symptom; do not assume the new diagnostics ran. Confirming that panel's
+next safe code/stage or successful checkpoint remains a separate runtime check.
+
 ## Cancellation diagnostics
 
-After updating the extension, start a new Gentle process for the affected session,
-then try `/compact` once. Both automatic and manual cancellation now report:
+After updating the extension, run `/reload` in the affected Gentle session, then
+try `/compact` once. Both automatic and manual cancellation now report:
 
 ```text
 Strata compaction cancelled [CODE] at STAGE. Safe explanation. No custom checkpoint saved.
@@ -113,9 +130,18 @@ attempt is needed. This diagnostic change does not claim to fix that unknown cau
 
 ## Offline verification
 
+The documented runner is Node 26 (verified on v26.12.1): native TypeScript imports
+allow the `.mjs` tests to exercise the `.ts` implementation directly, with no build
+or emitted JavaScript copy. The helpers retain JavaScript-compatible syntax;
+`index.ts` also has a type-only Pi API import and is checked through Pi's public
+TypeScript loader below. On this Node build, `node --check index.ts` rejects that
+existing `import type` syntax, even with `--experimental-strip-types`; it is not a
+substitute for the installed-loader check.
+
 ```sh
 node --test extensions/strata-compaction/adapter.test.mjs
-node --check extensions/strata-compaction/adapter.mjs
+node --check extensions/strata-compaction/adapter.ts
+node --check extensions/strata-compaction/core.ts
 node --test extensions/strata-compaction/*.test.mjs
 ```
 
@@ -123,11 +149,34 @@ Public hook tests inject the public-helper contracts, registry and fetch. They
 cover manual/threshold/overflow success, complete large source inclusion, retained
 metadata, previous-hook files, exact wire content, disabled thinking, unrelated
 models, model switching, abort and failure cancellation. No real model, credential
-or session is needed. A separate installed-Pi loader check validates `index.ts`.
-A scratch copy of T2's base was compared with the new adapter for another model:
-both produced identical exit/stdout/stderr, native continuation and zero I/O calls.
+or session is needed.
 
-## Parent's isolated live-hook check
+### Public-loader reload regression
+
+Point `STRATA_PI_ROOT` at the installed Pi package directory containing
+`dist/index.js`. This is a test-only locator, not a loader-policy override:
+
+```sh
+STRATA_PI_ROOT="/absolute/path/to/pi-coding-agent" node --test extensions/strata-compaction/reload.test.mjs
+```
+
+Leave `JITI_FS_CACHE` and `JITI_TRY_NATIVE` unset for this check; the test asserts
+that policy instead of modifying it. Without `STRATA_PI_ROOT`, only the installed
+public-loader test is explicitly skipped; the adapter/core tests still run. Set
+it for the full suite too when validating reload behavior. A skipped loader test
+is not reload proof.
+
+The regression copies the working `index.ts` and its actual helper chain into a
+fresh system-temp directory, loads it repeatedly in one process using public
+`discoverAndLoadExtensions`, and mutates each module between loads. It checks
+adapter cancellation notices, core count/generation prompts and entry
+serialization changes, plus first/prior checkpoints, native metadata/files,
+exact-model no-ops and request counters. All model/auth/fetch operations are
+synthetic stubs; no session manager or network is used. Teardown restores fetch
+and removes the temporary fixture. Reverting the entry to native `.mjs` helpers
+makes the regression fail rather than silently testing a separate fixed entry.
+
+## Earlier isolated live-hook evidence
 
 Use public `discoverAndLoadExtensions([absoluteIndexPath], scratch, scratch)` with
 both project and agent directories set to a fresh system-temp directory. Obtain
@@ -142,9 +191,10 @@ both project and agent directories set to a fresh system-temp directory. Obtain
   that `modelRegistry`, and an optional notification-only `ui`. No session manager
   or user's conversation is required. Do not persist the returned compaction.
 
-Disable jiti disk caching (`JITI_FS_CACHE=0`) for the isolated loader process and
-remove the scratch directory in teardown. Validate the returned boundary, usage
-and file details; repeat with an aborted signal to confirm cancellation. The
+The earlier live-counter run disabled Jiti disk caching (`JITI_FS_CACHE=0`) and
+removed its scratch directory in teardown. That was not an in-process reload
+check; use normal filesystem caching for the reload regression above. It validated
+returned boundaries, usage and files, plus aborted-signal cancellation. The
 initial plain-prompt parity check reported **74 counted = 74 generated prompt
 tokens** with thinking disabled. The full live hook check subsequently passed:
 **133 counted = 133 actual input tokens**, 32 output tokens, preserved boundaries
@@ -154,7 +204,7 @@ without a SessionManager or real conversation. Runtime setup used a read-only
 in-memory CredentialStore with public ModelRuntime/ModelRegistry APIs; AuthStorage
 is not exported from the package entry.
 
-Independent verification passed the 42-test suite, syntax checks, isolated loader,
+Earlier independent verification passed the 42-test suite, syntax checks, isolated loader,
 two additional public-helper probes and selective configuration-preservation check.
 Registration readback confirmed that only the approved reserve and extension path
 differ from the original settings. Oversized and multi-level cases are tested

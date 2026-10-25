@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { registerStrataCompaction } from './adapter.mjs';
+import { registerStrataCompaction } from './adapter.ts';
 
 const usage = { input: 10, output: 2, cacheRead: 0, cacheWrite: 0, totalTokens: 12,
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 } };

@@ -1,4 +1,4 @@
-import { summarizeBounded } from './core.mjs';
+import { summarizeBounded } from './core.ts';
 
 const PROVIDER = 'strata';
 const MODEL = 'qwen3.8-flash-next-iq3_xxs';

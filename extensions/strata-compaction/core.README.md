@@ -1,6 +1,6 @@
 # Bounded Strata summary core
 
-`core.mjs` provides dependency-free, in-memory hierarchical summarization for T2
+`core.ts` provides dependency-free, in-memory hierarchical summarization for T2
 (S1–S3). It prevents oversized summary requests without truncating source text or
 clamping summary output to one token. The T3 adapter owns model selection,
 transport, native compaction boundaries, file tracking and persistence.
@@ -8,7 +8,7 @@ transport, native compaction boundaries, file tracking and persistence.
 ## Adapter quick path
 
 ```js
-import { summarizeBounded } from './core.mjs';
+import { summarizeBounded } from './core.ts';
 
 const result = await summarizeBounded({
   parts: orderedSourceStrings,

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { summarizeBounded } from './core.mjs';
+import { summarizeBounded } from './core.ts';
 
 const tokens = context => context.messages.reduce((n, m) =>
   n + m.content.reduce((sum, c) => sum + [...c.text].length, 0), 0);
