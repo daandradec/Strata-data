@@ -4,6 +4,9 @@ Repositorio de código y documentación para las personalizaciones locales de
 [Strata](https://github.com/Niko1221/Strata). **No contiene los modelos ni es un
 instalador de Strata.** Puede convivir con los datos descargados en la misma carpeta.
 
+**Instalación en un equipo nuevo:** seguir la
+[guía paso a paso de clonación e instalación](#otro-computador-windows).
+
 ## Qué se respalda
 
 | Ruta | Contenido |
@@ -46,45 +49,191 @@ Para reproducir las personalizaciones actuales, usar la rama
 **`strata-local-installation` del fork Strata**, no su `main`. Esa rama está
 publicada y contiene los ajustes locales; `Strata-data` usa `main`.
 
-Ejemplo para una carpeta nueva; no clonar encima de destinos existentes no vacíos:
+### 1. Preparar una ubicación nueva
+
+Requisitos: Git instalado, Windows con PowerShell, conexión para las descargas y
+hardware/espacio suficientes para IQ3_XXS con contexto 128K. El instalador prepara
+el entorno privado de Python y el engine; no se copian desde otro computador.
+
+Abrir PowerShell y comprobar que Git está disponible:
+
+```powershell
+git --version
+```
+
+El ejemplo usa una carpeta dentro del usuario actual. Se puede cambiar `$base`
+por otra ruta absoluta. Usar la misma consola para los bloques siguientes; si se
+abre una consola nueva, volver a definir `$base`.
 
 ```powershell
 $base = Join-Path $HOME 'Strata-local'
 New-Item -ItemType Directory -Path $base -Force | Out-Null
+
+# Detenerse antes de clonar si alguno de los destinos ya existe.
+foreach ($destino in @("$base\Strata", "$base\Strata-data")) {
+    if (Test-Path -LiteralPath $destino) {
+        throw "El destino ya existe: $destino. No clonar encima ni borrar sus datos."
+    }
+}
+```
+
+Si Strata ya generó una carpeta de datos, no borrarla para poder clonar. Consultar
+la [guía de recuperación](docs/backup-and-restore.md) antes de continuar.
+
+### 2. Clonar los dos repositorios y las ramas correctas
+
+Primero clonar ambos repositorios; **después** ejecutar el instalador. Así
+`Strata-data` ya es un repositorio Git cuando Strata empieza a guardar sus datos.
+
+```powershell
 git clone --branch strata-local-installation https://github.com/daandradec/Strata.git "$base\Strata"
-git clone https://github.com/daandradec/Strata-data.git "$base\Strata-data"
+if ($LASTEXITCODE -ne 0) { throw 'No se pudo clonar el fork Strata.' }
+
+git clone --branch main https://github.com/daandradec/Strata-data.git "$base\Strata-data"
+if ($LASTEXITCODE -ne 0) { throw 'No se pudo clonar Strata-data.' }
+```
+
+`--branch strata-local-installation` selecciona las personalizaciones del fork;
+clonar solamente su `main` no reproduce esta instalación. El segundo comando
+recupera los lanzadores vigentes y la extensión, no los pesos del modelo.
+
+Comprobar las ramas:
+
+```powershell
+git -C "$base\Strata" branch --show-current
+# Esperado: strata-local-installation
+git -C "$base\Strata-data" branch --show-current
+# Esperado: main
+```
+
+La disposición final debe ser:
+
+```text
+Strata-local/
+  Strata/        <- fork, instalador, engine y configuración de la máquina
+  Strata-data/   <- este repo, lanzadores, extensión y datos locales ignorados
 ```
 
 **Clonar respalda código, no instala el modelo ni el entorno Python/engine.**
-Si el nuevo equipo tiene hardware suficiente para IQ3_XXS y contexto 128K, preparar
-la instalación con el instalador normal del fork, sin arrancar el modelo:
+
+### 3. Instalar IQ3_XXS sin arrancarlo automáticamente
+
+Solo si el equipo es adecuado para ese modelo/contexto, ejecutar el instalador
+normal del fork. Se usa `--setup` explícitamente para generar configuración con
+las rutas y el hardware nuevos, en lugar de arrancar con archivos heredados:
 
 ```powershell
-& "$base\Strata\START-HERE.bat" --setup --family qwen --model IQ3_XXS --context 131072 --port 38181 --data-dir "$base\Strata-data" --no-browser --no-start
+& "$base\Strata\START-HERE.bat" --setup --family qwen --model IQ3_XXS `
+    --context 131072 --port 38181 --host 127.0.0.1 `
+    --data-dir "$base\Strata-data" --no-browser --no-start
+if ($LASTEXITCODE -ne 0) { throw 'La instalación no terminó correctamente. Revisar el error antes de arrancar.' }
 ```
 
+| Opción | Para qué sirve |
+| --- | --- |
+| `--setup` | Reconfigura/instala para la máquina actual. |
+| `--family qwen --model IQ3_XXS` | Elige el modelo que esperan estos lanzadores. |
+| `--context 131072` | Configura 128K de contexto. |
+| `--port 38181` | Mantiene el puerto dedicado usado por esta integración. |
+| `--host 127.0.0.1` | Limita el servidor al propio computador. |
+| `--data-dir` | Guarda los pesos y paquetes junto a este repo, aunque hubiera otra ruta recordada. |
+| `--no-browser --no-start` | Instala sin abrir navegador ni cargar el modelo al terminar. |
+
+Seguir las indicaciones del instalador y esperar a que finalice sin errores.
 El instalador debe generar `.venv`, `strata-iq3_xxs.json` y `run-iq3_xxs.bat` con
 las rutas y el hardware de esa máquina, y descargar o reutilizar los pesos.
+
+Comprobar que existen los archivos básicos; las tres respuestas deben ser `True`:
+
+```powershell
+Test-Path -LiteralPath "$base\Strata\.venv\Scripts\python.exe"
+Test-Path -LiteralPath "$base\Strata\strata-iq3_xxs.json"
+Test-Path -LiteralPath "$base\Strata\run-iq3_xxs.bat"
+```
+
 No copiar la `.venv` ni los JSON/batches generados de otro computador: contienen
 rutas y decisiones de hardware locales. Tampoco usar el migrador histórico
 `install-iq3_xxs-local.py`, que contiene rutas específicas del equipo original.
 Si se instala otro modelo, estos dos lanzadores IQ3_XXS no lo seleccionan: usar el
 arranque nativo correspondiente o adaptar los lanzadores de forma explícita.
 
-Después, el arranque sigue siendo manual:
+### 4. Arrancar manualmente
+
+Elegir **una** de estas opciones, no ambas para cargar dos servidores:
 
 ```powershell
+# Modelo/API sin navegador:
 powershell -NoProfile -ExecutionPolicy Bypass -File "$base\Strata-data\start_model_qwen.ps1"
-# O bien, con interfaz web:
+```
+
+O bien:
+
+```powershell
+# Modelo con interfaz web; puede reutilizar un Strata compatible ya activo:
 powershell -NoProfile -ExecutionPolicy Bypass -File "$base\Strata-data\start_web_strata.ps1"
 ```
 
-Si también se usa Gentle Shell, instalarlo/configurarlo por separado: registrar el
-proveedor en `http://127.0.0.1:38181/v1` y el modelo
-`strata/qwen3.8-flash-next-iq3_xxs`, con contexto 131072. Al integrar
-`settings.fragment.json`, reemplazar su ruta de ejemplo `E:/Strata-data/...` por
-la **ruta absoluta real de la extensión en el nuevo equipo**, sin reemplazar los
-demás ajustes. La autenticación y las sesiones no viajan en este repo.
+Mantener abierta la consola que cargó el modelo y esperar el mensaje `Listo`.
+Cerrar esa consola o usar Ctrl+C detiene el servidor que ella inició. Si el
+lanzador web reutilizó un servidor existente, su cierre corresponde al proceso
+que lo inició. Los scripts no detienen procesos ajenos para liberar un puerto.
+
+### 5. Comprobar la API
+
+Desde otra consola PowerShell, una vez terminada la carga:
+
+```powershell
+Invoke-RestMethod -Uri 'http://127.0.0.1:38181/health'
+Invoke-RestMethod -Uri 'http://127.0.0.1:38181/v1/models'
+```
+
+El estado esperado incluye `loaded = True`, `max_context = 131072` y el modelo
+`qwen3.8-flash-next-iq3_xxs`. Si la carga sigue en curso, esperar y volver a
+consultar. Un puerto ocupado por otro servicio no demuestra que Strata esté listo.
+
+### 6. Integrar Gentle Shell, si se necesita
+
+Gentle Shell y sus ajustes se preparan por separado; no se instalan al clonar:
+
+| Ajuste | Valor de esta integración |
+| --- | --- |
+| Proveedor | `strata` |
+| API | `openai-completions` |
+| Base URL | `http://127.0.0.1:38181/v1` |
+| ID del modelo dentro del proveedor | `qwen3.8-flash-next-iq3_xxs` |
+| Referencia completa en los ajustes | `strata/qwen3.8-flash-next-iq3_xxs` |
+| Ventana de contexto | `131072` |
+
+Para la compactación, integrar
+[`settings.fragment.json`](extensions/strata-compaction/settings.fragment.json)
+siguiendo la [guía de la extensión](extensions/strata-compaction/README.md).
+Reemplazar su ruta de ejemplo `E:/Strata-data/...` por la **ruta absoluta real** de
+la extensión en el equipo nuevo. Este comando imprime una ruta válida para el
+ejemplo de esta guía, con barras compatibles con JSON:
+
+```powershell
+(Join-Path $base 'Strata-data\extensions\strata-compaction\index.ts').Replace('\', '/')
+```
+
+Combinar únicamente la entrada de extensión y el override del modelo
+(`reserveTokens: 32768`); nunca reemplazar todo el archivo de ajustes ni eliminar
+otros modelos/extensiones. Después usar `/reload` o abrir una nueva sesión de
+Gentle Shell. La autenticación, las sesiones y las preferencias personales como el
+esfuerzo de pensamiento no viajan en este repo.
+
+### Si algo falla
+
+- **El destino de clonación ya existe:** no borrar modelos ni ejecutar una
+  limpieza forzada; revisar la guía de recuperación antes de continuar.
+- **Aparecen rutas antiguas como `E:/Strata`:** verificar que se ejecutó el
+  instalador normal con `--setup`, no el migrador histórico ni un batch copiado.
+- **Puerto 38181 ocupado:** identificar qué servicio lo usa; los lanzadores no
+  matan procesos ajenos. Si se elige otro puerto, mantener coherentes el instalador
+  y la URL del cliente.
+- **Modelo distinto o contexto incompatible:** usar la configuración y el
+  lanzador correspondientes; estos scripts están orientados a IQ3_XXS/128K.
+- **La API funciona pero Gentle Shell no:** revisar proveedor, URL, ID del modelo
+  y ruta de la extensión del nuevo equipo.
 
 ## Guardar cambios
 
