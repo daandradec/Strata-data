@@ -28,7 +28,7 @@ function ignored(path) {
 
 const sourcePaths = [
   '.gitignore', '.gitattributes', 'README.md',
-  '.github/workflows/verify.yml', 'docs/backup-and-restore.md',
+  'docs/backup-and-restore.md',
   'tests/repository.test.mjs', 'tests/test_launchers.py',
   'start_model_qwen.ps1', 'start_web_strata.ps1',
   'extensions/strata-compaction/index.ts',
@@ -53,6 +53,7 @@ test('runtime data and unknown root files stay outside Git', () => {
     '.codegraph/graph.db', '.atl/state.json', 'tmp-rkh-evaluation/result.json',
     'launcher-verification.json', 'strata-iq3_xxs.json', 'unknown/new-file.txt',
     'extensions/another-extension/index.ts', 'odd/tasks/private-notes.md',
+    '.github/workflows/verify.yml', '.github/workflows/new-workflow.yaml',
   ]) assert.equal(ignored(path), true, `Runtime data must be ignored: ${path}`);
 });
 
@@ -80,6 +81,7 @@ test('the Git index contains no ignored payload, binary data, oversized files or
   const paths = execFileSync('git', ['ls-files', '-z'], { cwd: root, encoding: 'utf8', windowsHide: true })
     .split('\0').filter(Boolean);
   for (const path of sourcePaths) assert.ok(paths.includes(path), `Required source is not versioned: ${path}`);
+  assert.equal(paths.some(path => path.startsWith('.github/workflows/')), false, 'GitHub Actions is intentionally not used');
   const markers = [
     /-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----/,
     /github_pat_[A-Za-z0-9_]{30,}/,

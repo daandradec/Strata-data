@@ -4,6 +4,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
 from pathlib import Path
+import shutil
 import socket
 import subprocess
 import tempfile
@@ -49,8 +50,12 @@ class LauncherTests(unittest.TestCase):
         self.parent = (ROOT / ".launcher-tests").resolve()
         self.parent.mkdir(exist_ok=True)
         self.temp = tempfile.TemporaryDirectory(prefix="repo-launcher-", dir=self.parent)
-        self.root = Path(self.temp.name).resolve()
+        self.fixture = Path(self.temp.name).resolve()
         self.addCleanup(self.cleanup)
+        self.root = self.fixture / "Strata"
+        self.root.mkdir()
+        self.data = self.fixture / "Strata-data"
+        self.data.mkdir()
         python = self.root / ".venv/Scripts/python.exe"
         python.parent.mkdir(parents=True)
         # The tests must reject/reuse before this invalid executable can run.
@@ -60,7 +65,7 @@ class LauncherTests(unittest.TestCase):
 
     def cleanup(self):
         # Validate the resolved target before TemporaryDirectory recursively removes it.
-        if self.root.parent != self.parent or not self.root.name.startswith("repo-launcher-"):
+        if self.fixture.parent != self.parent or not self.fixture.name.startswith("repo-launcher-"):
             raise RuntimeError("Unexpected launcher fixture path")
         self.temp.cleanup()
 
@@ -68,9 +73,14 @@ class LauncherTests(unittest.TestCase):
         self.config.write_text(json.dumps(dict(port=port, args=["--max-context", "131072"])))
         self.before = self.config.read_bytes()
 
-    def invoke(self, *options, main=False):
+    def invoke(self, *options, main=False, sibling_layout=False):
         name = "start_model_qwen.ps1" if main else "start_web_strata.ps1"
-        command = "& " + quote(ROOT / name) + " -StrataRoot " + quote(self.root)
+        script_root = self.data if sibling_layout else ROOT
+        if sibling_layout:
+            shutil.copyfile(ROOT / name, self.data / name)
+        command = "& " + quote(script_root / name)
+        if not sibling_layout:
+            command += " -StrataRoot " + quote(self.root)
         command += " " + " ".join(options)
         command = "try { " + command + " } catch { [Console]::Error.WriteLine($_.Exception.Message); exit 1 }"
         return subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive",
@@ -100,6 +110,18 @@ class LauncherTests(unittest.TestCase):
             self.assertGreater(port, 8099)
             self.configure(port)
             self.reused(self.invoke("-NoBrowser"), port)
+
+    def test_relocated_web_finds_sibling_strata_without_absolute_root(self):
+        with mock_api() as port:
+            self.configure(port)
+            self.reused(self.invoke("-NoBrowser", sibling_layout=True), port)
+
+    def test_relocated_main_finds_sibling_strata_without_absolute_root(self):
+        with mock_api() as port:
+            self.configure(port)
+            self.rejected(self.invoke(main=True, sibling_layout=True),
+                          "El puerto configurado ya esta ocupado. Este script no detiene servidores ajenos. "
+                          "Para abrir Strata existente, usa start_web_strata.ps1.")
 
     def test_configured_port_respects_explicit_maximum(self):
         with mock_api() as port:

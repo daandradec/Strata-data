@@ -4,7 +4,6 @@
 !/.gitignore
 !/.gitattributes
 !/README.md
-!/.github/
 !/docs/
 !/tests/
 !/start_model_qwen.ps1
