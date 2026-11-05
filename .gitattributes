@@ -1,0 +1,14 @@
+* text=auto
+.gitignore text eol=lf
+.gitattributes text eol=lf
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.mjs text eol=lf
+*.ts text eol=lf
+*.py text eol=lf
+
+# Preserve the existing Windows launchers byte-for-byte on backup and restore.
+*.ps1 -text whitespace=cr-at-eol
+*.bat -text whitespace=cr-at-eol
