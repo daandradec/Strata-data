@@ -85,7 +85,7 @@ esa situación por separado antes de volver a asociarla al remoto.
 En una máquina nueva sin carpeta previa, se puede clonar en la ubicación final y
 después instalar Strata en el directorio hermano. Será necesario descargar o
 restaurar los modelos y volver a integrar los ajustes externos por separado.
-La [guía para otro computador](../README.md#otro-computador-windows) indica la rama
+La [guía manual para otro computador](manual-installation.md#otro-computador-windows) indica la rama
 correcta del fork (`strata-local-installation`), la disposición de carpetas y el
 instalador normal que genera rutas/configuración específicas de la nueva máquina.
 

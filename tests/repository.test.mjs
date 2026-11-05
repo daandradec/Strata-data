@@ -30,6 +30,8 @@ const sourcePaths = [
   '.gitignore', '.gitattributes', 'README.md',
   'docs/backup-and-restore.md',
   'tests/repository.test.mjs', 'tests/test_launchers.py',
+  'tests/test_bootstrap.py', 'install/Instalar-Strata.ps1',
+  'install/Instalar.bat', 'install/bootstrap.py', 'install/README.md',
   'start_model_qwen.ps1', 'start_web_strata.ps1',
   'extensions/strata-compaction/index.ts',
   'extensions/strata-compaction/adapter.ts',
@@ -54,6 +56,8 @@ test('runtime data and unknown root files stay outside Git', () => {
     'launcher-verification.json', 'strata-iq3_xxs.json', 'unknown/new-file.txt',
     'extensions/another-extension/index.ts', 'odd/tasks/private-notes.md',
     '.github/workflows/verify.yml', '.github/workflows/new-workflow.yaml',
+    'Instalar-Strata.ps1', 'Instalar.bat', 'bootstrap.py',
+    '.install-state/installed.json', '.strata-install-backups/settings.json',
   ]) assert.equal(ignored(path), true, `Runtime data must be ignored: ${path}`);
 });
 
@@ -69,8 +73,9 @@ test('secrets, weights, local state and build output are ignored even inside all
     '.pytest_cache/state', '.cache/state', '.codegraph/graph.db', '.atl/state',
     'coverage/summary.json', 'dist/output.js', 'build/output.o',
     'weights.gguf', 'weights.safetensors', 'experts.bin', 'engine.dll', 'model.zip',
+    '.install-state/installed.json', '.strata-install-backups/settings.json',
   ];
-  for (const directory of ['extensions/strata-compaction', 'docs', 'tests']) {
+  for (const directory of ['extensions/strata-compaction', 'docs', 'tests', 'install']) {
     for (const path of generated) {
       assert.equal(ignored(`${directory}/${path}`), true, `Generated/private file must be ignored: ${directory}/${path}`);
     }

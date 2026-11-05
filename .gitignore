@@ -6,6 +6,7 @@
 !/README.md
 !/docs/
 !/tests/
+!/install/
 !/start_model_qwen.ps1
 !/start_web_strata.ps1
 !/extensions/
@@ -43,6 +44,8 @@ __pycache__/
 .ruff_cache/
 .codegraph/
 .atl/
+.install-state/
+.strata-install-backups/
 coverage/
 dist/
 build/
